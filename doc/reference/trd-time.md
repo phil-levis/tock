@@ -8,7 +8,7 @@ Kernel Time HIL
 **Author:** Guillaume Endignoux, Amit Levy and Philip Levis <br/>
 **Draft-Created:** Feb 06, 2017<br/>
 **Draft-Modified:** March 18, 2020<br/>
-**Draft-Version:** 2<br/>
+**Draft-Version:** 3<br/>
 **Draft-Discuss:** tock-dev@googlegroups.com</br>
 
 Abstract
@@ -207,6 +207,8 @@ pub trait Alarm: Time {
   fn get_alarm(&self) -> Self::Ticks;
   fn disarm(&self) -> ReturnCode;
   fn set_alarm_client(&'a self, client: &'a dyn AlarmClient);
+  fn is_armed(&self) -> bool;
+  fn minimum_dt(&self) -> Self::Ticks;
 }
 ```
 
@@ -236,6 +238,20 @@ passed and the callback should be issued immediately (e.g., with a
 deferred procedure call, or setting the alarm very short in the
 future).
 
+The `minimum_dt` method allows a client to determine the minimum `dt`
+allowed for `set_alarm`. For safety and correctness, hardware often
+imposes a delta over the current time. In the simplest case, if one reads
+the current time then sets the compare to be current + 1, it is possible
+that the counter actually ticked over before the compare value is stored.
+For example, a client might read the current counter to be 75, add 1 to it,
+and store the resulting 76 in a compare register. If the counter incremented
+to 76 while 76 was being computed, then storing 76 in the compare register
+will not result in an alarm fired. Particular chips can require larger 
+minimum deltas than 1. Allowing a client to query for this value allows
+them to avoid a pattern in which they have to set the alarm they want but
+then check if it was actually set to that value.
+
+
 
 5 `Timer` and `TimerClient` traits
 ===============================
@@ -255,8 +271,8 @@ pub trait TimerClient {
 
 pub trait Timer<'a>: Time {
   fn set_timer_client(&'a self, &'a dyn TimerClient);
-  fn oneshot(&self, interval: Self::Ticks) -> Self::Ticks;
-  fn repeating(&self, interval: Self::Ticks) -> Self::Ticks;
+  fn oneshot(&'a self, interval: Self::Ticks) -> Self::Ticks;
+  fn repeating(&'a self, interval: Self::Ticks) -> Self::Ticks;
 
   fn interval(&self) -> Option<Self::Ticks>;
   fn is_oneshot(&self) -> bool;
