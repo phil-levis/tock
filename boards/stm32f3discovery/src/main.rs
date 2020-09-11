@@ -61,7 +61,7 @@ struct STM32F3Discovery {
         'static,
         VirtualMuxAlarm<'static, stm32f303xc::tim2::Tim2<'static>>,
     >,
-    adc: &'static capsules::adc_syscall::AdcSyscall<'static>,
+    adc: &'static capsules::adc::AdcSyscall<'static>,
 }
 
 /// Mapping of integer syscalls to objects that implement syscalls.
